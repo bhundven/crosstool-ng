@@ -46,6 +46,9 @@ testing/docker/*/build
 testing/docker/*/install
 testing/docker/*/xtools
 
+# ctngconfig binary acquired during configure --with-ctngconfig
+.ctngconfig/
+
 # This is the place where toolchains are built
 .build/
 # .. and log for 'build-all'

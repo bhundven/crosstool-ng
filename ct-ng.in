@@ -19,7 +19,11 @@ ifeq (@enable_local@,yes)
 # automake does not allow to set pkgxxxdir, they are always derived from
 # a respective xxxdir. So, for enable-local case, set them directly here.
 export CT_LIB_DIR:=$(patsubst %/,%,$(dir $(CT_NG)))
+ifeq (@with_ctngconfig@,no)
 export CT_LIBEXEC_DIR:=$(CT_LIB_DIR)/kconfig
+else
+export CT_LIBEXEC_DIR:=@ctngconfig_libexec_dir@
+endif
 export CT_DOC_DIR:=$(CT_LIB_DIR)/docs
 export CT_LICENSE_DIR
 else
@@ -36,6 +40,11 @@ export CT_VERSION:=@PACKAGE_VERSION@
 # Export with an empty value: this masks the version detection variable in
 # user-visible configurators, and suppresses a warning from kconfig.
 export CT_VCHECK=
+
+# Set the config symbol prefix used by kconfig / ctngconfig.
+# The C kconfig tools get this via -DCONFIG_="CT_" at compile time;
+# ctngconfig reads it from this environment variable at runtime.
+export CONFIG_=CT_
 
 # Current version of the configuration file. Defined here, because we also
 # need to pass it to the upgrade script - which may receive an input that

@@ -50,6 +50,60 @@ AS_IF([test "${with_bash_completion}" = "no"],
 AM_CONDITIONAL([INSTALL_BASH_COMPLETION], [test -n "${BASH_COMPLETION_DIR}"])
 AC_SUBST([BASH_COMPLETION_DIR])
 
+#--------------------------------------------------------------------
+# Use ctngconfig (Rust kconfig replacement) instead of C kconfig tools
+AC_ARG_WITH([ctngconfig],
+    [AS_HELP_STRING([--with-ctngconfig@<:@=PATH@:>@],
+        [use ctngconfig instead of kconfig C tools (optionally specify path to binary)])],
+    [], [with_ctngconfig=no])
+
+AC_ARG_WITH([ctngconfig-version],
+    [AS_HELP_STRING([--with-ctngconfig-version=TAG],
+        [ctngconfig version tag to acquire (default: pinned in get-ctngconfig.sh, or "latest")])],
+    [], [with_ctngconfig_version=])
+
+AC_ARG_ENABLE([ctngconfig-source-only],
+    [AS_HELP_STRING([--enable-ctngconfig-source-only],
+        [always build ctngconfig from source with cargo, skip binary download])],
+    [], [enable_ctngconfig_source_only=no])
+
+AC_ARG_WITH([ctngconfig-source-dir],
+    [AS_HELP_STRING([--with-ctngconfig-source-dir=PATH],
+        [dev mode: build ctngconfig from a local source checkout at PATH.
+         If PATH does not exist, clone the repo there first.
+         Rebuilds only when source files are newer than the installed binary.])],
+    [], [with_ctngconfig_source_dir=])
+
+AS_IF([test "x${with_ctngconfig}" != "xno"],
+    [AS_IF([test "x${with_ctngconfig}" != "xyes"],
+        [dnl User provided a path to the binary
+         AS_IF([test -x "${with_ctngconfig}"],
+             [CTNGCONFIG_BIN="${with_ctngconfig}"],
+             [AC_MSG_ERROR([ctngconfig binary not found or not executable: ${with_ctngconfig}])])
+         ctngconfig_libexec_dir="$(dirname "${CTNGCONFIG_BIN}")"
+        ],
+        [dnl --with-ctngconfig without a path: acquire during configure
+         AC_MSG_NOTICE([acquiring ctngconfig via scripts/get-ctngconfig.sh])
+         ctngconfig_libexec_dir="${ac_pwd}/.ctngconfig"
+         ctngconfig_get_args="--dest=${ctngconfig_libexec_dir}"
+         AS_IF([test -n "${with_ctngconfig_version}"],
+             [ctngconfig_get_args="${ctngconfig_get_args} --version=${with_ctngconfig_version}"])
+         AS_IF([test "x${enable_ctngconfig_source_only}" = "xyes"],
+             [ctngconfig_get_args="${ctngconfig_get_args} --source-only"])
+         AS_IF([test -n "${with_ctngconfig_source_dir}"],
+             [ctngconfig_get_args="${ctngconfig_get_args} --source-dir=${with_ctngconfig_source_dir}"])
+         AS_IF(["${srcdir}/scripts/get-ctngconfig.sh" ${ctngconfig_get_args}],
+             [CTNGCONFIG_BIN="${ctngconfig_libexec_dir}/ctngconfig"],
+             [AC_MSG_ERROR([failed to acquire ctngconfig; install gh CLI or cargo, or use --with-ctngconfig=PATH])])
+        ])
+     AC_MSG_NOTICE([using ctngconfig: ${CTNGCONFIG_BIN}])
+    ])
+AC_SUBST([CTNGCONFIG_BIN])
+AC_SUBST([ctngconfig_libexec_dir])
+AC_SUBST([with_ctngconfig])
+AM_CONDITIONAL([USE_KCONFIG_C], [test "x${with_ctngconfig}" = "xno"])
+AM_CONDITIONAL([USE_CTNGCONFIG], [test "x${with_ctngconfig}" != "xno"])
+
 # Check for --build and --host...
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
@@ -93,8 +147,9 @@ AC_PROG_CC
 AM_PROG_CC_C_O
 AC_PROG_CXX
 AC_PROG_CPP
-AC_PROG_LEX([noyywrap])
-AX_PROG_BISON
+AS_IF([test "x${with_ctngconfig}" = "xno"],
+    [AC_PROG_LEX([noyywrap])
+     AX_PROG_BISON])
 AS_IF([test -z "$CC" -o -z "$CXX"],
       [AC_MSG_ERROR([no suitable compiler found])])
 
@@ -309,15 +364,15 @@ AC_FUNC_ALLOCA
 AM_GNU_GETTEXT([external])
 AM_GNU_GETTEXT_VERSION([0.19.7])
 
-# For now, curses are needed to build kconfig. We may support a command-line
-# only configuration without curses later. For now, fail in configure but
-# consider it ok in config.h.
-AX_WITH_CURSES
-AS_IF([test "x$ax_cv_curses" != "xyes" ], [AC_MSG_ERROR([curses library not found])])
-AX_WITH_CURSES_PANEL
-AS_IF([test "x$ax_cv_panel" != "xyes" ], [AC_MSG_ERROR([panel library not found])])
-AX_WITH_CURSES_MENU
-AS_IF([test "x$ax_cv_menu" != "xyes" ], [AC_MSG_ERROR([menu library not found])])
+AS_IF([test "x${with_ctngconfig}" = "xno"],
+    [# Curses are needed to build kconfig C tools (mconf/nconf).
+     # When using ctngconfig, these are not needed (it uses ratatui/crossterm).
+     AX_WITH_CURSES
+     AS_IF([test "x$ax_cv_curses" != "xyes" ], [AC_MSG_ERROR([curses library not found])])
+     AX_WITH_CURSES_PANEL
+     AS_IF([test "x$ax_cv_panel" != "xyes" ], [AC_MSG_ERROR([panel library not found])])
+     AX_WITH_CURSES_MENU
+     AS_IF([test "x$ax_cv_menu" != "xyes" ], [AC_MSG_ERROR([menu library not found])])])
 
 AH_BOTTOM([
 /* Select the correct curses/menu/panel headers */
@@ -366,8 +421,9 @@ AM_COND_IF([INSTALL_USER_MANUAL], [AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no])])
 AC_CONFIG_FILES([
     Makefile
     paths.sh
-    kconfig/Makefile
     config/configure.in
 ])
+AS_IF([test "x${with_ctngconfig}" = "xno"],
+    [AC_CONFIG_FILES([kconfig/Makefile])])
 
 AC_OUTPUT

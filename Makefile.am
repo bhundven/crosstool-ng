@@ -3,7 +3,9 @@
 
 include verbatim-data.mk
 
+if USE_KCONFIG_C
 SUBDIRS		= kconfig
+endif
 
 bin_SCRIPTS		= ct-ng
 CLEANFILES		= ct-ng bash-completion/ct-ng docs/ct-ng.1
@@ -72,6 +74,15 @@ install-data-hook:
 	ln -s COPYING $(DESTDIR)$(pkgdatadir)/LICENSE
 if INSTALL_BASH_COMPLETION
 	chmod a-x $(DESTDIR)$(compdir)/$(ctng_progname)
+endif
+if USE_CTNGCONFIG
+	$(MKDIR_P) $(DESTDIR)$(pkglibexecdir)
+	$(INSTALL_PROGRAM) @ctngconfig_libexec_dir@/ctngconfig $(DESTDIR)$(pkglibexecdir)/ctngconfig
+	cd $(DESTDIR)$(pkglibexecdir) && \
+		for name in conf mconf nconf; do \
+			rm -f $$name && \
+			$(LN_S) ctngconfig $$name; \
+		done
 endif
 
 uninstall-hook:
