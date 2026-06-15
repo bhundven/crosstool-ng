@@ -1,0 +1,17 @@
+# Trivy configuration for crosstool-NG security scans.
+# Auto-loaded by Trivy when running from the repository root (e.g. `trivy fs .`).
+
+# Documented exemptions for intentional findings (see file for justifications).
+ignorefile: .trivyignore.yaml
+
+scan:
+  skip-dirs:
+    # Build artifacts: extracted third-party sources (gcc, zstd, ...) created by
+    # a toolchain build. Not part of crosstool-NG and gitignored.
+    - .build
+    # Copied (and slightly modified) from the Linux kernel scripts/kconfig:
+    # https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/scripts/kconfig
+    - kconfig
+  skip-files:
+    # Toolchain build log; gitignored and only contains build output.
+    - build.log

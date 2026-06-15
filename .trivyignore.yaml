@@ -1,0 +1,20 @@
+misconfigurations:
+  # DS002: "Image user should not be 'root'".
+  # These are throwaway CI/test images. The test harness (testing/docker/dmgr.sh)
+  # starts each container as root and drops to the unprivileged 'ctng' user at
+  # runtime via `su -l ctng`, and also exposes an explicit `root` action. Pinning
+  # the image to USER ctng would break both `su` and the root action, so root is
+  # intentional here.
+  - id: AVD-DS-0002
+    paths:
+      - "testing/docker/*/Dockerfile"
+    statement: Test images intentionally run as root; runtime drops to 'ctng' via su.
+
+  # DS001: "':latest' tag used".
+  # These images deliberately track the current/rolling release of each distro so
+  # that crosstool-NG is exercised against up-to-date toolchain environments.
+  # Pinning would defeat the purpose of the cross-distro test matrix.
+  - id: AVD-DS-0001
+    paths:
+      - "testing/docker/*/Dockerfile"
+    statement: Test images intentionally track rolling/current distro releases.

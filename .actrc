@@ -1,0 +1,5 @@
+# Default options for nektos/act (gh act) when testing crosstool-NG workflows locally.
+# The CI matrix runs on ubuntu-22.04; map it to the catthehacker image that ships
+# the tooling GitHub-hosted runners provide.
+-P ubuntu-22.04=catthehacker/ubuntu:act-22.04
+--container-architecture linux/amd64

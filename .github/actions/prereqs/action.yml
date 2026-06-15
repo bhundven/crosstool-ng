@@ -1,0 +1,35 @@
+---
+name: Install crosstool-NG prerequisites
+description: Install crosstool-NG build prerequisites for the current runner OS.
+
+inputs:
+  os:
+    description: "Runner OS as reported by runner.os (Linux or macOS)"
+    required: true
+  add-local-bin-to-path:
+    description: "Append the installed .local/bin directory to GITHUB_PATH"
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Install Linux prerequisites
+      if: ${{ inputs.os == 'Linux' }}
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          bison flex gperf help2man libtool-bin meson ninja-build texinfo
+
+    - name: Install macOS prerequisites
+      if: ${{ inputs.os == 'macOS' }}
+      shell: bash
+      run: |
+        brew install autoconf automake bash binutils gawk gnu-sed \
+          gnu-tar help2man libtool make meson ncurses ninja pkg-config texinfo
+
+    - name: Add .local/bin to PATH
+      if: ${{ inputs.add-local-bin-to-path == 'true' }}
+      shell: bash
+      run: echo "${{ github.workspace }}/.local/bin" >> "$GITHUB_PATH"

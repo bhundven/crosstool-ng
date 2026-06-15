@@ -38,6 +38,9 @@ build.log
 temp.*
 stamp-h1
 
+# Security scan output
+*.sarif
+
 # MacOS
 .DS_Store
 

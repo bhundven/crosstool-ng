@@ -1,0 +1,48 @@
+---
+name: Security scan
+
+on:
+  push:
+    branches: [master]
+    tags: ['*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  trivy:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      # Required to publish SARIF results to GitHub code scanning.
+      security-events: write
+    steps:
+      - name: clone
+        uses: actions/checkout@v6
+
+      # trivy.yaml at the repo root supplies skip-dirs and the .trivyignore.yaml
+      # ignorefile; misconfig scanning is enabled so the Dockerfile exemptions
+      # documented there apply.
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          trivy-config: trivy.yaml
+          format: sarif
+          output: trivy-results.sarif
+
+      # GITHUB_TOKEN on pull requests from forks is read-only, so code-scanning
+      # upload only runs for non-fork events.
+      - name: Upload SARIF to code scanning
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif

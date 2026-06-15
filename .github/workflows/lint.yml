@@ -1,0 +1,36 @@
+---
+name: Lint
+
+on:
+  push:
+    branches: [master]
+    tags: ['*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: clone
+        uses: actions/checkout@v6
+      # Validates the workflow files and runs shellcheck on their run: blocks.
+      - name: actionlint
+        uses: raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8  # v2.1.2
+
+  shellcheck:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: clone
+        uses: actions/checkout@v6
+      - name: install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: shellcheck CI helper scripts
+        run: shellcheck maintainer/gha/*.sh
